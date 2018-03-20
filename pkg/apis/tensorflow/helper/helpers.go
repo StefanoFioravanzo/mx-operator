@@ -22,7 +22,11 @@ import (
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 var (
 	groupVersionKind = schema.GroupVersionKind{
@@ -34,6 +38,7 @@ var (
 
 // AsOwner make OwnerReference according to the parameter
 func AsOwner(tfJob *tfv1.TFJob) metav1.OwnerReference {
+	defer Exit(Enter("helpers.go $FN"))
 	trueVar := true
 	// Both api.OwnerReference and metatypes.OwnerReference are combined into that.
 	return metav1.OwnerReference{
@@ -48,6 +53,7 @@ func AsOwner(tfJob *tfv1.TFJob) metav1.OwnerReference {
 
 // ConfigureAcceleratorsForTFJobSpec adds any accelerator specific configuration to the pods.
 func ConfigureAcceleratorsForTFJobSpec(c *tfv1.TFJobSpec, accelerators map[string]tfv1.AcceleratorConfig) error {
+	defer Exit(Enter("helpers.go $FN"))
 	for _, r := range c.ReplicaSpecs {
 		if r.Template == nil {
 			return fmt.Errorf("Replica is missing Template; %v", util.Pformat(r))
@@ -106,14 +112,17 @@ func ConfigureAcceleratorsForTFJobSpec(c *tfv1.TFJobSpec, accelerators map[strin
 // Cleanup cleans up user passed spec, e.g. defaulting, transforming fields.
 // TODO: move this to admission controller
 func Cleanup(c *tfv1.TFJobSpec) {
+	defer Exit(Enter("helpers.go $FN"))
 	// TODO(jlewi): Add logic to cleanup user provided spec; e.g. by filling in defaults.
 	// We should have default container images so user doesn't have to provide these.
 }
 
 func CRDName() string {
+	defer Exit(Enter("helpers.go $FN"))
 	return fmt.Sprintf("%s.%s", tfv1.CRDKindPlural, tfv1.CRDGroup)
 }
 
 func scalingReason(from, to int) string {
+	defer Exit(Enter("helpers.go $FN"))
 	return fmt.Sprintf("Current cluster size: %d, desired cluster size: %d", from, to)
 }

@@ -20,10 +20,15 @@ import (
 
 	tfv1 "github.com/kubeflow/tf-operator/pkg/apis/tensorflow/v1alpha1"
 	"github.com/kubeflow/tf-operator/pkg/util"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 // ValidateTFJobSpec checks that the TFJobSpec is valid.
 func ValidateTFJobSpec(c *tfv1.TFJobSpec) error {
+	defer Exit(Enter())
 	if c.TerminationPolicy == nil || c.TerminationPolicy.Chief == nil {
 		return fmt.Errorf("invalid termination policy: %v", c.TerminationPolicy)
 	}

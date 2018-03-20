@@ -18,7 +18,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 var (
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
@@ -38,6 +42,7 @@ const (
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: CRDVersion}
 
 func init() {
+	defer Exit(Enter("register.go $FN"))
 	// We only register manually written functions here. The registration of the
 	// generated functions takes place in the generated files. The separation
 	// makes the code compile even when the generated files are missing.
@@ -46,11 +51,13 @@ func init() {
 
 // Resource takes an unqualified resource and returns a Group-qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
+	defer Exit(Enter())
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
+	defer Exit(Enter("register.go $FN"))
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&TFJob{},
 		&TFJobList{},

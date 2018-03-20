@@ -40,7 +40,11 @@ import (
 	informers "github.com/kubeflow/tf-operator/pkg/client/informers/externalversions"
 	listers "github.com/kubeflow/tf-operator/pkg/client/listers/kubeflow/v1alpha1"
 	"github.com/kubeflow/tf-operator/pkg/trainer"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 const (
 	controllerName = "kubeflow"
@@ -85,6 +89,7 @@ type Controller struct {
 
 func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 	config tfv1alpha1.ControllerConfig, tfJobInformerFactory informers.SharedInformerFactory) (*Controller, error) {
+	defer Exit(Enter("controller.go $FN"))
 	tfJobInformer := tfJobInformerFactory.Kubeflow().V1alpha1().TFJobs()
 
 	kubeflowscheme.AddToScheme(scheme.Scheme)
@@ -138,6 +143,7 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
+	defer Exit(Enter())
 	defer runtime.HandleCrash()
 	defer c.WorkQueue.ShutDown()
 
@@ -167,6 +173,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 // processNextWorkItem function in order to read and process a message on the
 // workqueue.
 func (c *Controller) runWorker() {
+	defer Exit(Enter())
 	for c.processNextWorkItem() {
 	}
 }
@@ -174,6 +181,7 @@ func (c *Controller) runWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
 func (c *Controller) processNextWorkItem() bool {
+	defer Exit(Enter())
 	key, quit := c.WorkQueue.Get()
 	if quit {
 		return false
@@ -200,6 +208,7 @@ func (c *Controller) processNextWorkItem() bool {
 // When a job is completely processed it will return true indicating that its ok to forget about this job since
 // no more processing will occur for it.
 func (c *Controller) syncTFJob(key string) (bool, error) {
+	defer Exit(Enter())
 	startTime := time.Now()
 	defer func() {
 		log.Debugf("Finished syncing job %q (%v)", key, time.Since(startTime))
@@ -258,6 +267,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 
 // obj could be an *batch.Job, or a DeletionFinalStateUnknown marker item.
 func (c *Controller) enqueueController(obj interface{}) {
+	defer Exit(Enter())
 	key, err := keyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Couldn't get key for object %+v: %v", obj, err))

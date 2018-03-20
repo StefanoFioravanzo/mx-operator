@@ -32,3 +32,9 @@ examples/tf_sample/tf_sample.egg-info/
 examples/.ipynb_checkpoints/
 
 **/.ipynb_checkpoints
+
+*.log
+
+# Folder created by symlink_dependences.sh
+# to resolve package dependences in Goland IDE
+vendor/src

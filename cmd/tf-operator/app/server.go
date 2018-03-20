@@ -39,7 +39,11 @@ import (
 	"github.com/kubeflow/tf-operator/pkg/util"
 	"github.com/kubeflow/tf-operator/pkg/util/k8sutil"
 	"github.com/kubeflow/tf-operator/version"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 var (
 	leaseDuration = 15 * time.Second
@@ -48,7 +52,7 @@ var (
 )
 
 func Run(opt *options.ServerOption) error {
-
+	defer Exit(Enter("sever.go $FN"))
 	// Check if the -version flag was passed and, if so, print the version and exit.
 	if opt.PrintVersion {
 		version.PrintVersionAndExit()
@@ -128,6 +132,7 @@ func Run(opt *options.ServerOption) error {
 }
 
 func readControllerConfig(controllerConfigFile string) *v1alpha1.ControllerConfig {
+	defer Exit(Enter("sever.go $FN"))
 	controllerConfig := &v1alpha1.ControllerConfig{}
 	if controllerConfigFile != "" {
 		log.Infof("Loading controller config from %v.", controllerConfigFile)
@@ -148,6 +153,7 @@ func readControllerConfig(controllerConfigFile string) *v1alpha1.ControllerConfi
 }
 
 func createClients(config *rest.Config) (clientset.Interface, clientset.Interface, tfjobclient.Interface, error) {
+	defer Exit(Enter("sever.go $FN"))
 	kubeClient, err := clientset.NewForConfig(rest.AddUserAgent(config, "tfjob_operator"))
 	if err != nil {
 		return nil, nil, nil, err

@@ -32,7 +32,11 @@ import (
 	tfjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
 	"github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
 	"github.com/kubeflow/tf-operator/pkg/util"
+
+	"github.com/sabhiram/go-tracey"
 )
+
+var Exit, Enter = tracey.New(nil)
 
 // TODO(jlewi): We should switch a New pattern and make trainingJob private so we can
 // ensure correctness on creation.
@@ -66,6 +70,7 @@ type TaskSpec struct {
 }
 
 func initJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, recorder record.EventRecorder, job *tfv1alpha1.TFJob) (*TrainingJob, error) {
+	defer Exit(Enter("training.go: $FN"))
 	j := &TrainingJob{
 		KubeCli:     kubeCli,
 		tfJobClient: tfJobClient,
@@ -79,6 +84,7 @@ func initJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, re
 }
 
 func NewJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, recorder record.EventRecorder, job *tfv1alpha1.TFJob, config *tfv1alpha1.ControllerConfig) (*TrainingJob, error) {
+	defer Exit(Enter("training.go: $FN"))
 	j, err := initJob(kubeCli, tfJobClient, recorder, job)
 	if err != nil {
 		return nil, err
@@ -88,10 +94,12 @@ func NewJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, rec
 }
 
 func (j *TrainingJob) UID() types.UID {
+	defer Exit(Enter("training.go: $FN"))
 	return j.job.ObjectMeta.UID
 }
 
 func (j *TrainingJob) ClusterSpec() ClusterSpec {
+	defer Exit(Enter("training.go: $FN"))
 	clusterSpec := make(ClusterSpec)
 
 	for _, p := range j.Replicas {
@@ -109,6 +117,7 @@ func (j *TrainingJob) ClusterSpec() ClusterSpec {
 
 // deleteResources deletes the replicas it it was created
 func (j *TrainingJob) deleteResources() error {
+	defer Exit(Enter("training.go: $FN"))
 	for _, r := range j.Replicas {
 		if err := r.Delete(); err != nil {
 			return err
@@ -119,6 +128,7 @@ func (j *TrainingJob) deleteResources() error {
 }
 
 func (j *TrainingJob) GetStatus() (tfv1alpha1.State, []*tfv1alpha1.TFReplicaStatus, error) {
+	defer Exit(Enter("training.go: $FN"))
 	chief := j.job.Spec.TerminationPolicy.Chief
 	chiefState := tfv1alpha1.ReplicaStateUnknown
 
@@ -158,6 +168,7 @@ func (j *TrainingJob) GetStatus() (tfv1alpha1.State, []*tfv1alpha1.TFReplicaStat
 // isRetryableTerminationState returns true if a container terminated in a state
 // that we consider retryable.
 func isRetryableTerminationState(s *v1.ContainerStateTerminated) bool {
+	defer Exit(Enter("training.go: $FN"))
 	// TODO(jlewi): Need to match logic in
 	// https://cs.corp.google.com/piper///depot/google3/cloud/ml/beta/job/training_job_state_util.cc?l=88
 	if s.Reason == "OOMKilled" {
@@ -195,11 +206,13 @@ func isRetryableTerminationState(s *v1.ContainerStateTerminated) bool {
 }
 
 func (j *TrainingJob) masterName() string {
+	defer Exit(Enter("training.go: $FN"))
 	return fmt.Sprintf("master-%v-0", j.job.Spec.RuntimeId)
 }
 
 // setup the training job.
 func (j *TrainingJob) setup(config *tfv1alpha1.ControllerConfig) {
+	defer Exit(Enter("training.go: $FN"))
 	err := func() error {
 		// If the job has already started we shouldn't set it up again.
 		if j.status.Phase != tfv1alpha1.TFJobPhaseNone {
@@ -237,6 +250,7 @@ func (j *TrainingJob) setup(config *tfv1alpha1.ControllerConfig) {
 
 // setup Replicas. This creates in memory data structures corresponding to the replicas.
 func (j *TrainingJob) setupReplicas() error {
+	defer Exit(Enter("training.go: $FN"))
 	if len(j.Replicas) != len(j.job.Spec.ReplicaSpecs) {
 		j.Replicas = make([]*TFReplicaSet, 0, len(j.job.Spec.ReplicaSpecs))
 		for _, t := range j.job.Spec.ReplicaSpecs {
@@ -252,6 +266,7 @@ func (j *TrainingJob) setupReplicas() error {
 }
 
 func (j *TrainingJob) Delete() {
+	defer Exit(Enter("training.go: $FN"))
 	// TODO(jlewi): Delete is what should cause us to delete the Pods.
 	// we shouldn't delete the pods when the jobs finish because leaving the pods
 	// allows us to get the logs from the pods after the job finishes.
@@ -272,6 +287,7 @@ func (j *TrainingJob) Delete() {
 
 // updateCRDStatus updates the job status based on TraingingJob.status.
 func (j *TrainingJob) updateCRDStatus() error {
+	defer Exit(Enter("training.go: $FN"))
 	// If the status hasn't changed then there's no reason to update the CRD.
 	if reflect.DeepEqual(j.job.Status, j.status) {
 		return nil
@@ -291,6 +307,7 @@ func (j *TrainingJob) updateCRDStatus() error {
 
 // reconcile tries to get the job into the desired state.
 func (j *TrainingJob) Reconcile(config *tfv1alpha1.ControllerConfig) error {
+	defer Exit(Enter("training.go: $FN"))
 	if j.job.Status.Phase == tfv1alpha1.TFJobPhaseNone {
 		// The job hasn't been setup.
 		j.setup(config)
@@ -387,14 +404,17 @@ func (j *TrainingJob) Reconcile(config *tfv1alpha1.ControllerConfig) error {
 }
 
 func (j *TrainingJob) name() string {
+	defer Exit(Enter("training.go: $FN"))
 	return j.job.ObjectMeta.GetName()
 }
 
 // fullname returns the namespace and name for the job.
 func (j *TrainingJob) fullname() string {
+	defer Exit(Enter("training.go: $FN"))
 	return j.job.ObjectMeta.GetNamespace() + ":" + j.job.ObjectMeta.GetName()
 }
 
 func (j *TrainingJob) SchedulerName() string {
+	defer Exit(Enter("training.go: $FN"))
 	return j.job.Spec.SchedulerName
 }
