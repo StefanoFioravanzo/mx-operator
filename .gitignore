@@ -38,3 +38,4 @@ examples/.ipynb_checkpoints/
 # Folder created by symlink_dependences.sh
 # to resolve package dependences in Goland IDE
 vendor/src
+dev/
