@@ -143,7 +143,7 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 // is closed, at which point it will shutdown the workqueue and wait for
 // workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
-	defer Exit(Enter())
+	defer Exit(Enter("controller.go $FN"))
 	defer runtime.HandleCrash()
 	defer c.WorkQueue.ShutDown()
 
@@ -173,7 +173,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 // processNextWorkItem function in order to read and process a message on the
 // workqueue.
 func (c *Controller) runWorker() {
-	defer Exit(Enter())
+	defer Exit(Enter("controller.go $FN"))
 	for c.processNextWorkItem() {
 	}
 }
@@ -181,7 +181,7 @@ func (c *Controller) runWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
 func (c *Controller) processNextWorkItem() bool {
-	defer Exit(Enter())
+	defer Exit(Enter("controller.go $FN"))
 	key, quit := c.WorkQueue.Get()
 	if quit {
 		return false
@@ -208,7 +208,7 @@ func (c *Controller) processNextWorkItem() bool {
 // When a job is completely processed it will return true indicating that its ok to forget about this job since
 // no more processing will occur for it.
 func (c *Controller) syncTFJob(key string) (bool, error) {
-	defer Exit(Enter())
+	defer Exit(Enter("controller.go $FN, key: %s", key))
 	startTime := time.Now()
 	defer func() {
 		log.Debugf("Finished syncing job %q (%v)", key, time.Since(startTime))
@@ -267,7 +267,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 
 // obj could be an *batch.Job, or a DeletionFinalStateUnknown marker item.
 func (c *Controller) enqueueController(obj interface{}) {
-	defer Exit(Enter())
+	defer Exit(Enter("controller.go $FN"))
 	key, err := keyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Couldn't get key for object %+v: %v", obj, err))

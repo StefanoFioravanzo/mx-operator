@@ -70,7 +70,7 @@ type TFConfig struct {
 }
 
 func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecorder, tfReplicaSpec tfv1alpha1.TFReplicaSpec, job *TrainingJob) (*TFReplicaSet, error) {
-	defer Exit(Enter("replica.go $FN"))
+	defer Exit(Enter("replicas.go $FN"))
 	if tfReplicaSpec.TFReplicaType == tfv1alpha1.MASTER && *tfReplicaSpec.Replicas != 1 {
 		return nil, errors.New("The MASTER must have Replicas = 1")
 	}
@@ -108,7 +108,7 @@ func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecord
 
 // Labels returns the labels for this replica set.
 func (s *TFReplicaSet) Labels() KubernetesLabels {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	return KubernetesLabels(map[string]string{
 		"kubeflow.org": "",
 		"job_type":     string(s.Spec.TFReplicaType),
@@ -120,7 +120,7 @@ func (s *TFReplicaSet) Labels() KubernetesLabels {
 
 // CreateServiceWithIndex will create a new service with specify index
 func (s *TFReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	taskLabels := s.Labels()
 	taskLabels["task_index"] = fmt.Sprintf("%v", index)
 
@@ -150,7 +150,7 @@ func (s *TFReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) 
 
 // CreatePodWithIndex will create a new pod with specify index
 func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	taskLabels := s.Labels()
 	taskLabels["task_index"] = fmt.Sprintf("%v", index)
 
@@ -207,7 +207,7 @@ func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 
 // Delete deletes the replicas
 func (s *TFReplicaSet) Delete() error {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	selector, err := s.Labels().ToSelector()
 	if err != nil {
 		return err
@@ -273,7 +273,7 @@ func (s *TFReplicaSet) Delete() error {
 
 // replicaStatusFromPodList returns a status from a list of pods for a job.
 func replicaStatusFromPodList(l v1.PodList, name string) tfv1alpha1.ReplicaState {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	var latest *v1.Pod
 	for _, i := range l.Items {
 		if latest == nil {
@@ -328,7 +328,7 @@ func replicaStatusFromPodList(l v1.PodList, name string) tfv1alpha1.ReplicaState
 }
 
 func (s *TFReplicaSet) GetSingleReplicaStatus(index int32) tfv1alpha1.ReplicaState {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	p, err := s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).Get(s.genName(index), meta_v1.GetOptions{})
 
 	if err != nil {
@@ -364,7 +364,7 @@ func (s *TFReplicaSet) GetSingleReplicaStatus(index int32) tfv1alpha1.ReplicaSta
 
 // Status returns the status of the replica set.
 func (s *TFReplicaSet) GetStatus() (tfv1alpha1.TFReplicaStatus, error) {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	status := tfv1alpha1.TFReplicaStatus{
 		TFReplicaType:  s.Spec.TFReplicaType,
 		State:          tfv1alpha1.ReplicaStateUnknown,
@@ -409,7 +409,7 @@ func (s *TFReplicaSet) GetStatus() (tfv1alpha1.TFReplicaStatus, error) {
 
 // SyncPods will try to check current pods for this TFReplicaSet and try to make it as desired.
 func (s *TFReplicaSet) SyncPods() error {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	for index := int32(0); index < *s.Spec.Replicas; index++ {
 
 		// Label to get all pods of this TFReplicaType + index
@@ -463,7 +463,7 @@ func (s *TFReplicaSet) SyncPods() error {
 
 // SyncServices will try to check current services for this TFReplicaSet and try to make it as desired.
 func (s *TFReplicaSet) SyncServices() error {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	for index := int32(0); index < *s.Spec.Replicas; index++ {
 		_, err := s.ClientSet.CoreV1().Services(s.Job.job.ObjectMeta.Namespace).Get(s.genName(index), meta_v1.GetOptions{})
 		if err != nil && k8s_errors.IsNotFound(err) {
@@ -495,7 +495,7 @@ func (s *TFReplicaSet) SyncServices() error {
 }
 
 func (s *TFReplicaSet) genName(index int32) string {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	// Truncate tfjob name to 40 characters
 	// The whole job name should be compliant with the DNS_LABEL spec, up to a max length of 63 characters
 	// Thus genName(40 chars)-replicaType(6 chars)-runtimeId(4 chars)-index(4 chars), also leaving some spaces
@@ -504,12 +504,12 @@ func (s *TFReplicaSet) genName(index int32) string {
 }
 
 func (s *TFReplicaSet) genPodName(index int32) string {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	// Generate a new pod name with random string
 	return s.genName(index) + "-" + util.RandString(5)
 }
 
 func (s *TFReplicaSet) defaultPSConfigMapName() string {
-	defer Exit(Enter())
+	defer Exit(Enter("replicas.go $FN"))
 	return fmt.Sprintf("cm-ps-%v", s.Job.job.Spec.RuntimeId)
 }
