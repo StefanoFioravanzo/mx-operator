@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/tensorflow/v1alpha1"
+	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
 )
 
 const RecommendedConfigPathEnvVar = "KUBECONFIG"

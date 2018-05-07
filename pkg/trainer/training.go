@@ -26,10 +26,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
-	"github.com/kubeflow/tf-operator/pkg/apis/tensorflow/helper"
-	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/tensorflow/v1alpha1"
-	"github.com/kubeflow/tf-operator/pkg/apis/tensorflow/validation"
-	tfjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
+	"github.com/kubeflow/tf-operator/pkg/apis/mxnet/helper"
+	mxv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
+	"github.com/kubeflow/tf-operator/pkg/apis/mxnet/validation"
+	mxjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
 	"github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
 	"github.com/kubeflow/tf-operator/pkg/util"
 
@@ -41,7 +41,7 @@ var Exit, Enter = tracey.New(nil)
 // TODO(jlewi): We should switch a New pattern and make trainingJob private so we can
 // ensure correctness on creation.
 type TrainingJob struct {
-	job *tfv1alpha1.TFJob
+	job *mxv1alpha1.MXJob
 
 	KubeCli kubernetes.Interface
 
@@ -49,12 +49,12 @@ type TrainingJob struct {
 
 	Replicas []*TFReplicaSet
 
-	tfJobClient tfjobclient.Interface
+	mxjobclient mxjobclient.Interface
 
 	// in memory state of the job.
 	// status is the source of truth after job struct is materialized. Changes to the status to be persisted
 	// should be made here.
-	status tfv1alpha1.TFJobStatus
+	status mxv1alpha1.MXJobStatus
 
 	memberCounter int
 }
@@ -69,11 +69,11 @@ type TaskSpec struct {
 	Index int    `json:"index"`
 }
 
-func initJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, recorder record.EventRecorder, job *tfv1alpha1.TFJob) (*TrainingJob, error) {
+func initJob(kubeCli kubernetes.Interface, mxjobclient mxjobclient.Interface, recorder record.EventRecorder, job *mxv1alpha1.MXJob) (*TrainingJob, error) {
 	defer Exit(Enter("training.go: $FN"))
 	j := &TrainingJob{
 		KubeCli:     kubeCli,
-		tfJobClient: tfJobClient,
+		mxjobclient: mxjobclient,
 		recorder:    recorder,
 		Replicas:    make([]*TFReplicaSet, 0),
 		job:         job,
@@ -83,9 +83,9 @@ func initJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, re
 	return j, nil
 }
 
-func NewJob(kubeCli kubernetes.Interface, tfJobClient tfjobclient.Interface, recorder record.EventRecorder, job *tfv1alpha1.TFJob, config *tfv1alpha1.ControllerConfig) (*TrainingJob, error) {
+func NewJob(kubeCli kubernetes.Interface, mxjobclient mxjobclient.Interface, recorder record.EventRecorder, job *mxv1alpha1.MXJob, config *mxv1alpha1.ControllerConfig) (*TrainingJob, error) {
 	defer Exit(Enter("training.go: $FN"))
-	j, err := initJob(kubeCli, tfJobClient, recorder, job)
+	j, err := initJob(kubeCli, mxjobclient, recorder, job)
 	if err != nil {
 		return nil, err
 	}
@@ -106,10 +106,10 @@ func (j *TrainingJob) ClusterSpec() ClusterSpec {
 		replicaNames := make([]string, 0, *p.Spec.Replicas)
 
 		for i := int32(0); i < *p.Spec.Replicas; i++ {
-			replicaNames = append(replicaNames, fmt.Sprintf("%v:%v", p.genName(i), *p.Spec.TFPort))
+			replicaNames = append(replicaNames, fmt.Sprintf("%v:%v", p.genName(i), *p.Spec.MXPort))
 		}
 
-		clusterSpec[strings.ToLower(string(p.Spec.TFReplicaType))] = replicaNames
+		clusterSpec[strings.ToLower(string(p.Spec.MXReplicaType))] = replicaNames
 	}
 
 	return clusterSpec
@@ -127,39 +127,39 @@ func (j *TrainingJob) deleteResources() error {
 	return nil
 }
 
-func (j *TrainingJob) GetStatus() (tfv1alpha1.State, []*tfv1alpha1.TFReplicaStatus, error) {
+func (j *TrainingJob) GetStatus() (mxv1alpha1.State, []*mxv1alpha1.MXReplicaStatus, error) {
 	defer Exit(Enter("training.go: $FN"))
 	chief := j.job.Spec.TerminationPolicy.Chief
-	chiefState := tfv1alpha1.ReplicaStateUnknown
+	chiefState := mxv1alpha1.ReplicaStateUnknown
 
-	state := tfv1alpha1.StateUnknown
-	replicaStatuses := make([]*tfv1alpha1.TFReplicaStatus, 0)
+	state := mxv1alpha1.StateUnknown
+	replicaStatuses := make([]*mxv1alpha1.MXReplicaStatus, 0)
 
 	// The state for each replica.
 	// TODO(jlewi): We will need to modify this code if we want to allow multiples of a given type of replica.
-	replicaSetStates := make(map[tfv1alpha1.TFReplicaType]tfv1alpha1.ReplicaState)
+	replicaSetStates := make(map[mxv1alpha1.MXReplicaType]mxv1alpha1.ReplicaState)
 
 	for _, r := range j.Replicas {
 		rStatus, err := r.GetStatus()
 		if err != nil {
-			log.Errorf("GetStatus() for %v returned error; %v", r.Spec.TFReplicaType, err)
+			log.Errorf("GetStatus() for %v returned error; %v", r.Spec.MXReplicaType, err)
 		}
 
-		replicaSetStates[r.Spec.TFReplicaType] = rStatus.State
+		replicaSetStates[r.Spec.MXReplicaType] = rStatus.State
 
 		replicaStatuses = append(replicaStatuses, &rStatus)
 
-		if string(r.Spec.TFReplicaType) == chief.ReplicaName {
+		if string(r.Spec.MXReplicaType) == chief.ReplicaName {
 			chiefState = r.GetSingleReplicaStatus(int32(chief.ReplicaIndex))
 		}
 	}
 
-	if chiefState == tfv1alpha1.ReplicaStateRunning {
-		state = tfv1alpha1.StateRunning
-	} else if chiefState == tfv1alpha1.ReplicaStateFailed {
-		state = tfv1alpha1.StateFailed
-	} else if chiefState == tfv1alpha1.ReplicaStateSucceeded {
-		state = tfv1alpha1.StateSucceeded
+	if chiefState == mxv1alpha1.ReplicaStateRunning {
+		state = mxv1alpha1.StateRunning
+	} else if chiefState == mxv1alpha1.ReplicaStateFailed {
+		state = mxv1alpha1.StateFailed
+	} else if chiefState == mxv1alpha1.ReplicaStateSucceeded {
+		state = mxv1alpha1.StateSucceeded
 	}
 
 	return state, replicaStatuses, nil
@@ -211,11 +211,11 @@ func (j *TrainingJob) masterName() string {
 }
 
 // setup the training job.
-func (j *TrainingJob) setup(config *tfv1alpha1.ControllerConfig) {
+func (j *TrainingJob) setup(config *mxv1alpha1.ControllerConfig) {
 	defer Exit(Enter("training.go: $FN"))
 	err := func() error {
 		// If the job has already started we shouldn't set it up again.
-		if j.status.Phase != tfv1alpha1.TFJobPhaseNone {
+		if j.status.Phase != mxv1alpha1.MXJobPhaseNone {
 			log.Warningf("Job %v has already been setup.", j.name())
 			return nil
 		}
@@ -240,11 +240,11 @@ func (j *TrainingJob) setup(config *tfv1alpha1.ControllerConfig) {
 
 	if err != nil {
 		j.status.Reason = err.Error()
-		j.status.Phase = tfv1alpha1.TFJobPhaseFailed
-		j.status.State = tfv1alpha1.StateFailed
+		j.status.Phase = mxv1alpha1.MXJobPhaseFailed
+		j.status.State = mxv1alpha1.StateFailed
 	} else {
-		j.status.Phase = tfv1alpha1.TFJobPhaseCreating
-		j.status.State = tfv1alpha1.StateRunning
+		j.status.Phase = mxv1alpha1.MXJobPhaseCreating
+		j.status.State = mxv1alpha1.StateRunning
 	}
 }
 
@@ -273,8 +273,8 @@ func (j *TrainingJob) Delete() {
 	//
 	log.Infof("TFJob %v deleted by the user", j.fullname())
 	// TODO(jlewi): This logic is probably insufficient.
-	if j.job.Status.Phase != tfv1alpha1.TFJobPhaseCleanUp {
-		j.status.Phase = tfv1alpha1.TFJobPhaseCleanUp
+	if j.job.Status.Phase != mxv1alpha1.MXJobPhaseCleanUp {
+		j.status.Phase = mxv1alpha1.MXJobPhaseCleanUp
 	}
 
 	// TODO(jlewi): Does it make sense to explicitly delete the resources? Should
@@ -295,7 +295,7 @@ func (j *TrainingJob) updateCRDStatus() error {
 
 	newJob := j.job
 	newJob.Status = j.status
-	newJob, err := j.tfJobClient.KubeflowV1alpha1().TFJobs(j.job.ObjectMeta.Namespace).Update(newJob)
+	newJob, err := j.mxjobclient.KubeflowV1alpha1().MXJobs(j.job.ObjectMeta.Namespace).Update(newJob)
 	if err != nil {
 		return err
 	}
@@ -306,9 +306,9 @@ func (j *TrainingJob) updateCRDStatus() error {
 }
 
 // reconcile tries to get the job into the desired state.
-func (j *TrainingJob) Reconcile(config *tfv1alpha1.ControllerConfig) error {
+func (j *TrainingJob) Reconcile(config *mxv1alpha1.ControllerConfig) error {
 	defer Exit(Enter("training.go: $FN"))
-	if j.job.Status.Phase == tfv1alpha1.TFJobPhaseNone {
+	if j.job.Status.Phase == mxv1alpha1.MXJobPhaseNone {
 		// The job hasn't been setup.
 		j.setup(config)
 
@@ -361,18 +361,18 @@ func (j *TrainingJob) Reconcile(config *tfv1alpha1.ControllerConfig) error {
 	}
 
 	// TODO(jlewi): We should update the Phase if we detect the job is done.
-	if state == tfv1alpha1.StateFailed {
+	if state == mxv1alpha1.StateFailed {
 		log.Errorf("Master failed Job: %v.", j.job.ObjectMeta.Name)
-		j.status.Phase = tfv1alpha1.TFJobPhaseDone
-		j.status.State = tfv1alpha1.StateFailed
-	} else if state == tfv1alpha1.StateSucceeded {
+		j.status.Phase = mxv1alpha1.MXJobPhaseDone
+		j.status.State = mxv1alpha1.StateFailed
+	} else if state == mxv1alpha1.StateSucceeded {
 		log.Infof("Master succeeded Job: %v.", j.job.ObjectMeta.Name)
-		j.status.Phase = tfv1alpha1.TFJobPhaseDone
-		j.status.State = tfv1alpha1.StateSucceeded
-	} else if state == tfv1alpha1.StateRunning {
+		j.status.Phase = mxv1alpha1.MXJobPhaseDone
+		j.status.State = mxv1alpha1.StateSucceeded
+	} else if state == mxv1alpha1.StateRunning {
 		log.Infof("Master running Job: %v.", j.job.ObjectMeta.Name)
-		j.status.Phase = tfv1alpha1.TFJobPhaseRunning
-		j.status.State = tfv1alpha1.StateRunning
+		j.status.Phase = mxv1alpha1.MXJobPhaseRunning
+		j.status.State = mxv1alpha1.StateRunning
 	} else {
 		log.Infof("Job %v status=%v", j.job.ObjectMeta.Name, util.Pformat(j.status))
 	}
@@ -383,7 +383,7 @@ func (j *TrainingJob) Reconcile(config *tfv1alpha1.ControllerConfig) error {
 		return err
 	}
 
-	if j.job.Status.Phase == tfv1alpha1.TFJobPhaseCleanUp {
+	if j.job.Status.Phase == mxv1alpha1.MXJobPhaseCleanUp {
 		if cErr := j.deleteResources(); cErr != nil {
 			log.Errorf("Job %v trainingJob.Delete() error; %v", j.job.ObjectMeta.Name, cErr)
 		}

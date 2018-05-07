@@ -22,6 +22,7 @@ import (
 const (
 	CRDKind       = "mxjob"
 	CRDKindPlural = "mxjobs"
+	// TODO(stefano): Check wether to use fioravanzo.org or mxnet (was there tensorflow or k8s.io?)
 	CRDGroup      = "fioravanzo.org"
 	CRDVersion    = "v1alpha1"
 	// Value of the APP label that gets applied to a lot of entities.
@@ -81,8 +82,8 @@ const (
 )
 
 const (
-	DefaultTFContainer string = "mxnet"
-	DefaultTFImage     string = "stefanofioravanzo/mxnet:1.3.0"
+	DefaultMXContainer string = "mxnet"
+	DefaultMXImage     string = "stefanofioravanzo/mxnet:1.3.0"
 )
 
 // TODO(jlewi): We probably want to add a name field. This would allow us to have more than 1 type of each worker.
@@ -96,7 +97,7 @@ type MXReplicaSpec struct {
 	// +optional
 	Replicas *int32              `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
 	Template *v1.PodTemplateSpec `json:"template,omitempty" protobuf:"bytes,3,opt,name=template"`
-	// TFPort is the port to use for TF services.
+	// MXPort is the port to use for MX services.
 	MXPort        *int32 `json:"mxPort,omitempty" protobuf:"varint,1,opt,name=mxPort"`
 	MXReplicaType `json:"mxReplicaType"`
 }

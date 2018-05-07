@@ -46,7 +46,8 @@ func init() {
 	// We only register manually written functions here. The registration of the
 	// generated functions takes place in the generated files. The separation
 	// makes the code compile even when the generated files are missing.
-	SchemeBuilder.Register(addDefaultingFuncs)
+	// TODO: Understand why here we need to call this function. Why do we need a defaults.go file? Why does not generate the deepcopy thourgh the defaulter code-gen?
+	//SchemeBuilder.Register(addDefaultingFuncs)
 }
 
 // Resource takes an unqualified resource and returns a Group-qualified GroupResource.

@@ -34,11 +34,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/tensorflow/v1alpha1"
+	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
 	tfjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
 	kubeflowscheme "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
 	informers "github.com/kubeflow/tf-operator/pkg/client/informers/externalversions"
-	listers "github.com/kubeflow/tf-operator/pkg/client/listers/kubeflow/v1alpha1"
+	listers "github.com/kubeflow/tf-operator/pkg/client/listers/mxnet/v1alpha1"
 	"github.com/kubeflow/tf-operator/pkg/trainer"
 
 	"github.com/sabhiram/go-tracey"
@@ -70,7 +70,7 @@ type Controller struct {
 	config tfv1alpha1.ControllerConfig
 	jobs   map[string]*trainer.TrainingJob
 
-	TFJobLister listers.TFJobLister
+	TFJobLister listers.MXJobLister
 	TFJobSynced cache.InformerSynced
 
 	// WorkQueue is a rate limited work queue. This is used to queue work to be
@@ -90,7 +90,7 @@ type Controller struct {
 func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 	config tfv1alpha1.ControllerConfig, tfJobInformerFactory informers.SharedInformerFactory) (*Controller, error) {
 	defer Exit(Enter("controller.go $FN"))
-	tfJobInformer := tfJobInformerFactory.Kubeflow().V1alpha1().TFJobs()
+	tfJobInformer := tfJobInformerFactory.Kubeflow().V1alpha1().MXJobs()
 
 	kubeflowscheme.AddToScheme(scheme.Scheme)
 	log.Debug("Creating event broadcaster")
@@ -115,7 +115,7 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
-				case *tfv1alpha1.TFJob:
+				case *tfv1alpha1.MXJob:
 					log.Debugf("filter tfjob name: %v", t.Name)
 					return true
 				default:
@@ -222,7 +222,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 		return false, fmt.Errorf("invalid job key %q: either namespace or name is missing", key)
 	}
 
-	tfJob, err := c.TFJobLister.TFJobs(ns).Get(name)
+	tfJob, err := c.TFJobLister.MXJobs(ns).Get(name)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -249,7 +249,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 		return false, err
 	}
 
-	tfJob, err = c.TFJobClient.KubeflowV1alpha1().TFJobs(tfJob.ObjectMeta.Namespace).Get(tfJob.ObjectMeta.Name, metav1.GetOptions{})
+	tfJob, err = c.TFJobClient.KubeflowV1alpha1().MXJobs(tfJob.ObjectMeta.Namespace).Get(tfJob.ObjectMeta.Name, metav1.GetOptions{})
 
 	if err != nil {
 		return false, err
@@ -257,7 +257,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 
 	// TODO(jlewi): This logic will need to change when/if we get rid of phases and move to conditions. At that
 	// case we should forget about a job when the appropriate condition is reached.
-	if tfJob.Status.Phase == tfv1alpha1.TFJobPhaseCleanUp {
+	if tfJob.Status.Phase == tfv1alpha1.MXJobPhaseCleanUp {
 		return true, nil
 	} else {
 		return false, nil
