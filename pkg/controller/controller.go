@@ -102,7 +102,7 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 	controller := &Controller{
 		KubeClient:  kubeClient,
 		TFJobClient: tfJobClient,
-		WorkQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TFjobs"),
+		WorkQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "MXjobs"),
 		recorder:    recorder,
 		// TODO(jlewi)): What to do about cluster.Cluster?
 		jobs:   make(map[string]*trainer.TrainingJob),
@@ -148,7 +148,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.WorkQueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	log.Info("Starting TFJob controller")
+	log.Info("Starting MXJob controller")
 
 	// Wait for the caches to be synced before starting workers
 	log.Info("Waiting for informer caches to sync")

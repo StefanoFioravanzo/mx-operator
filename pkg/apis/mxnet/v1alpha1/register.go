@@ -31,9 +31,9 @@ var (
 
 const (
 	// GroupName is the group name use in this package.
-	GroupName = "kubeflow.org"
+	GroupName = "fioravanzo.org"
 	// TFJobResourceKind is the kind name.
-	TFJobResourceKind = "TFJob"
+	TFJobResourceKind = "MXJob"
 	// GroupVersion is the version.
 	GroupVersion = "v1alpha1"
 )
@@ -59,8 +59,8 @@ func Resource(resource string) schema.GroupResource {
 func addKnownTypes(scheme *runtime.Scheme) error {
 	defer Exit(Enter("register.go $FN"))
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&TFJob{},
-		&TFJobList{},
+		&MXJob{},
+		&MXJobList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
