@@ -35,6 +35,7 @@ const (
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:defaulter-gen=true
 // +resource:path=mxjob
 
 // MXJob describes mxjob info
@@ -88,6 +89,7 @@ const (
 
 // TODO(jlewi): We probably want to add a name field. This would allow us to have more than 1 type of each worker.
 // TODO(stefano): Understand the use of this struct. Where is this used?
+// This might be useful if you wanted to have a separate set of workers to do eval.
 // This might be useful if you wanted to have a separate set of workers to do eval.
 type MXReplicaSpec struct {
 	// Replicas is the number of desired replicas.
