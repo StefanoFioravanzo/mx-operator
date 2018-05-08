@@ -34,8 +34,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	tfv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
-	tfjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
+	mxv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
+	mxjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
 	kubeflowscheme "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
 	informers "github.com/kubeflow/tf-operator/pkg/client/informers/externalversions"
 	listers "github.com/kubeflow/tf-operator/pkg/client/listers/mxnet/v1alpha1"
@@ -65,13 +65,13 @@ var (
 
 type Controller struct {
 	KubeClient  kubernetes.Interface
-	TFJobClient tfjobclient.Interface
+	MXJobClient mxjobclient.Interface
 
-	config tfv1alpha1.ControllerConfig
+	config mxv1alpha1.ControllerConfig
 	jobs   map[string]*trainer.TrainingJob
 
-	TFJobLister listers.MXJobLister
-	TFJobSynced cache.InformerSynced
+	MXJobLister listers.MXJobLister
+	MXJobSynced cache.InformerSynced
 
 	// WorkQueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -87,12 +87,12 @@ type Controller struct {
 	syncHandler func(jobKey string) (bool, error)
 }
 
-func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
-	config tfv1alpha1.ControllerConfig, tfJobInformerFactory informers.SharedInformerFactory) (*Controller, error) {
+func New(kubeClient kubernetes.Interface, mxJobClient mxjobclient.Interface,
+	config mxv1alpha1.ControllerConfig, mxJobInformerFactory informers.SharedInformerFactory) (*Controller, error) {
 	defer Exit(Enter("controller.go $FN"))
-	tfJobInformer := tfJobInformerFactory.Kubeflow().V1alpha1().MXJobs()
+	mxJobInformer := mxJobInformerFactory.Kubeflow().V1alpha1().MXJobs()
 
-	kubeflowscheme.AddToScheme(scheme.Scheme)
+	kubeflowscheme.AddToScheme(scheme.Scheme)  // TODO(stefano): what is a scheme?
 	log.Debug("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.Infof)
@@ -101,7 +101,7 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 
 	controller := &Controller{
 		KubeClient:  kubeClient,
-		TFJobClient: tfJobClient,
+		MXJobClient: mxJobClient,
 		WorkQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "MXjobs"),
 		recorder:    recorder,
 		// TODO(jlewi)): What to do about cluster.Cluster?
@@ -111,12 +111,12 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 
 	log.Info("Setting up event handlers")
 	// Set up an event handler for when Foo resources change
-	tfJobInformer.Informer().AddEventHandler(
+	mxJobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
-				case *tfv1alpha1.MXJob:
-					log.Debugf("filter tfjob name: %v", t.Name)
+				case *mxv1alpha1.MXJob:
+					log.Debugf("filter mxjob name: %v", t.Name)
 					return true
 				default:
 					return false
@@ -131,9 +131,9 @@ func New(kubeClient kubernetes.Interface, tfJobClient tfjobclient.Interface,
 			},
 		})
 
-	controller.TFJobLister = tfJobInformer.Lister()
-	controller.TFJobSynced = tfJobInformer.Informer().HasSynced
-	controller.syncHandler = controller.syncTFJob
+	controller.MXJobLister = mxJobInformer.Lister()
+	controller.MXJobSynced = mxJobInformer.Informer().HasSynced
+	controller.syncHandler = controller.syncMXJob
 
 	return controller, nil
 }
@@ -152,12 +152,12 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	log.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.TFJobSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.MXJobSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
 	log.Infof("Starting %v workers", threadiness)
-	// Launch workers to process TFJob resources
+	// Launch workers to process MXJob resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -188,7 +188,7 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 	defer c.WorkQueue.Done(key)
 
-	forget, err := c.syncHandler(key.(string))
+	forget, err := c.syncHandler(key.(string))  // here call syncMXJob
 	if err == nil {
 		if forget {
 			c.WorkQueue.Forget(key)
@@ -207,7 +207,7 @@ func (c *Controller) processNextWorkItem() bool {
 //
 // When a job is completely processed it will return true indicating that its ok to forget about this job since
 // no more processing will occur for it.
-func (c *Controller) syncTFJob(key string) (bool, error) {
+func (c *Controller) syncMXJob(key string) (bool, error) {
 	defer Exit(Enter("controller.go $FN, key: %s", key))
 	startTime := time.Now()
 	defer func() {
@@ -222,7 +222,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 		return false, fmt.Errorf("invalid job key %q: either namespace or name is missing", key)
 	}
 
-	tfJob, err := c.TFJobLister.MXJobs(ns).Get(name)
+	mxJob, err := c.MXJobLister.MXJobs(ns).Get(name)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -234,8 +234,8 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 
 	// Create a new TrainingJob if there is no TrainingJob stored for it in the jobs map or if the UID's don't match.
 	// The UID's won't match in the event we deleted the job and then recreated the job with the same name.
-	if cJob, ok := c.jobs[key]; !ok || cJob.UID() != tfJob.UID {
-		nc, err := trainer.NewJob(c.KubeClient, c.TFJobClient, c.recorder, tfJob, &c.config)
+	if cJob, ok := c.jobs[key]; !ok || cJob.UID() != mxJob.UID {
+		nc, err := trainer.NewJob(c.KubeClient, c.MXJobClient, c.recorder, mxJob, &c.config)
 
 		if err != nil {
 			return false, err
@@ -249,7 +249,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 		return false, err
 	}
 
-	tfJob, err = c.TFJobClient.KubeflowV1alpha1().MXJobs(tfJob.ObjectMeta.Namespace).Get(tfJob.ObjectMeta.Name, metav1.GetOptions{})
+	mxJob, err = c.MXJobClient.KubeflowV1alpha1().MXJobs(mxJob.ObjectMeta.Namespace).Get(mxJob.ObjectMeta.Name, metav1.GetOptions{})
 
 	if err != nil {
 		return false, err
@@ -257,7 +257,7 @@ func (c *Controller) syncTFJob(key string) (bool, error) {
 
 	// TODO(jlewi): This logic will need to change when/if we get rid of phases and move to conditions. At that
 	// case we should forget about a job when the appropriate condition is reached.
-	if tfJob.Status.Phase == tfv1alpha1.MXJobPhaseCleanUp {
+	if mxJob.Status.Phase == mxv1alpha1.MXJobPhaseCleanUp {
 		return true, nil
 	} else {
 		return false, nil

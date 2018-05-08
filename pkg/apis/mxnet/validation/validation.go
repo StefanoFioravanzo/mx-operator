@@ -28,7 +28,7 @@ var Exit, Enter = tracey.New(nil)
 
 // ValidateTFJobSpec checks that the TFJobSpec is valid.
 func ValidateTFJobSpec(c *mxv1.MXJobSpec) error {
-	defer Exit(Enter())
+	defer Exit(Enter("validation.go: $FN"))
 	if c.TerminationPolicy == nil || c.TerminationPolicy.Chief == nil {
 		return fmt.Errorf("invalid termination policy: %v", c.TerminationPolicy)
 	}

@@ -69,10 +69,20 @@ type TFConfig struct {
 	Environment string `json:"environment"`
 }
 
+type MXConfig struct {
+	Role string			//"DMLC_ROLE": "scheduler",
+	PSUri string		//"DMLC_PS_ROOT_URI": "127.0.0.1",
+	PSPort string		//"DMLC_PS_ROOT_PORT": "9000",
+	NumServer int32		//"DMLC_NUM_SERVER": "1",
+	NumWorker int32		//"DMLC_NUM_WORKER": "1",
+	Verbosity int32		//"PS_VERBOSE": "2"
+}
+
 func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecorder, tfReplicaSpec mxv1alpha1.MXReplicaSpec, job *TrainingJob) (*TFReplicaSet, error) {
 	defer Exit(Enter("replicas.go $FN"))
 	if tfReplicaSpec.MXReplicaType == mxv1alpha1.SCHEDULER && *tfReplicaSpec.Replicas != 1 {
-		return nil, errors.New("The MASTER must have Replicas = 1")
+		// TODO(stefano): Could generate the schedule by default without having to declare it on the yml file
+		return nil, errors.New("The SCHEDULER must have Replicas = 1")
 	}
 
 	if tfReplicaSpec.MXPort == nil {
