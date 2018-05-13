@@ -28,7 +28,7 @@ const (
 	// Value of the APP label that gets applied to a lot of entities.
 	AppLabel = "mxnet-job"
 	// Defaults for the Spec
-	MXPort   = 0
+	MXPort   = 9000
 	Replicas = 1
 )
 

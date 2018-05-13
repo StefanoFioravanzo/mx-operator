@@ -53,7 +53,7 @@ type mXJobs struct {
 }
 
 // newMXJobs returns a MXJobs
-func newMXJobs(c *KubeflowV1alpha1Client, namespace string) *mXJobs {
+func newMXJobs(c *FioravanzoV1alpha1Client, namespace string) *mXJobs {
 	return &mXJobs{
 		client: c.RESTClient(),
 		ns:     namespace,

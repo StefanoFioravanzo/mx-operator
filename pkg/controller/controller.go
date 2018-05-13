@@ -90,7 +90,7 @@ type Controller struct {
 func New(kubeClient kubernetes.Interface, mxJobClient mxjobclient.Interface,
 	config mxv1alpha1.ControllerConfig, mxJobInformerFactory informers.SharedInformerFactory) (*Controller, error) {
 	defer Exit(Enter("controller.go $FN"))
-	mxJobInformer := mxJobInformerFactory.Kubeflow().V1alpha1().MXJobs()
+	mxJobInformer := mxJobInformerFactory.Fioravanzo().V1alpha1().MXJobs()
 
 	kubeflowscheme.AddToScheme(scheme.Scheme)  // TODO(stefano): what is a scheme?
 	log.Debug("Creating event broadcaster")
@@ -249,7 +249,7 @@ func (c *Controller) syncMXJob(key string) (bool, error) {
 		return false, err
 	}
 
-	mxJob, err = c.MXJobClient.KubeflowV1alpha1().MXJobs(mxJob.ObjectMeta.Namespace).Get(mxJob.ObjectMeta.Name, metav1.GetOptions{})
+	mxJob, err = c.MXJobClient.FioravanzoV1alpha1().MXJobs(mxJob.ObjectMeta.Namespace).Get(mxJob.ObjectMeta.Name, metav1.GetOptions{})
 
 	if err != nil {
 		return false, err

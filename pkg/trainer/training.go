@@ -30,8 +30,10 @@ import (
 	mxv1alpha1 "github.com/kubeflow/tf-operator/pkg/apis/mxnet/v1alpha1"
 	"github.com/kubeflow/tf-operator/pkg/apis/mxnet/validation"
 	mxjobclient "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
-	"github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
+	//"github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/scheme"
 	"github.com/kubeflow/tf-operator/pkg/util"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/sabhiram/go-tracey"
 )
@@ -221,7 +223,43 @@ func (j *TrainingJob) setup(config *mxv1alpha1.ControllerConfig) {
 		}
 
 		// Set defaults.
-		scheme.Scheme.Default(j.job)
+		// TODO(stefano): Understand how to use defaults.go and the defaulter generator
+		//scheme.Scheme.Default(j.job)
+
+		// SetDefaults_MXJob sets any unspecified values to defaults
+		SetDefaultsMXJob := func(obj *mxv1alpha1.MXJob) {
+			c := &obj.Spec
+
+			if c.MXImage == "" {
+				c.MXImage = mxv1alpha1.DefaultMXImage
+			}
+
+			// Check that each replica has a TensorFlow container.
+			for _, r := range c.ReplicaSpecs {
+
+				if r.MXPort == nil {
+					r.MXPort = proto.Int32(mxv1alpha1.MXPort)
+				}
+
+				if string(r.MXReplicaType) == "" {
+					r.MXReplicaType= mxv1alpha1.SCHEDULER
+				}
+
+				if r.Replicas == nil {
+					r.Replicas = proto.Int32(mxv1alpha1.Replicas)
+				}
+			}
+			if c.TerminationPolicy == nil {
+				c.TerminationPolicy = &mxv1alpha1.TerminationPolicySpec{
+					Chief: &mxv1alpha1.ChiefSpec{
+						ReplicaName:  "SCHEDULER",
+						ReplicaIndex: 0,
+					},
+				}
+			}
+
+		}
+		SetDefaultsMXJob(j.job)
 
 		err := validation.ValidateTFJobSpec(&j.job.Spec)
 		if err != nil {
@@ -295,7 +333,7 @@ func (j *TrainingJob) updateCRDStatus() error {
 
 	newJob := j.job
 	newJob.Status = j.status
-	newJob, err := j.mxjobclient.KubeflowV1alpha1().MXJobs(j.job.ObjectMeta.Namespace).Update(newJob)
+	newJob, err := j.mxjobclient.FioravanzoV1alpha1().MXJobs(j.job.ObjectMeta.Namespace).Update(newJob)
 	if err != nil {
 		return err
 	}

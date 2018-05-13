@@ -25,22 +25,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type KubeflowV1alpha1Interface interface {
+type FioravanzoV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	MXJobsGetter
 }
 
-// KubeflowV1alpha1Client is used to interact with features provided by the kubeflow.org group.
-type KubeflowV1alpha1Client struct {
+// FioravanzoV1alpha1Client is used to interact with features provided by the fioravanzo.org group.
+type FioravanzoV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *KubeflowV1alpha1Client) MXJobs(namespace string) MXJobInterface {
+func (c *FioravanzoV1alpha1Client) MXJobs(namespace string) MXJobInterface {
 	return newMXJobs(c, namespace)
 }
 
-// NewForConfig creates a new KubeflowV1alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*KubeflowV1alpha1Client, error) {
+// NewForConfig creates a new FioravanzoV1alpha1Client for the given config.
+func NewForConfig(c *rest.Config) (*FioravanzoV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -49,12 +49,12 @@ func NewForConfig(c *rest.Config) (*KubeflowV1alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &KubeflowV1alpha1Client{client}, nil
+	return &FioravanzoV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new KubeflowV1alpha1Client for the given config and
+// NewForConfigOrDie creates a new FioravanzoV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *KubeflowV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *FioravanzoV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -62,9 +62,9 @@ func NewForConfigOrDie(c *rest.Config) *KubeflowV1alpha1Client {
 	return client
 }
 
-// New creates a new KubeflowV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *KubeflowV1alpha1Client {
-	return &KubeflowV1alpha1Client{c}
+// New creates a new FioravanzoV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *FioravanzoV1alpha1Client {
+	return &FioravanzoV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -82,7 +82,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *KubeflowV1alpha1Client) RESTClient() rest.Interface {
+func (c *FioravanzoV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

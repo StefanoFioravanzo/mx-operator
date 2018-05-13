@@ -61,13 +61,13 @@ func NewFilteredMXJobInformer(client versioned.Interface, namespace string, resy
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.KubeflowV1alpha1().MXJobs(namespace).List(options)
+				return client.FioravanzoV1alpha1().MXJobs(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.KubeflowV1alpha1().MXJobs(namespace).Watch(options)
+				return client.FioravanzoV1alpha1().MXJobs(namespace).Watch(options)
 			},
 		},
 		&mxnet_v1alpha1.MXJob{},

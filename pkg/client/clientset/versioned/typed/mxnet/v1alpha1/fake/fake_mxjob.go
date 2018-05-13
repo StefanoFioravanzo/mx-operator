@@ -30,13 +30,13 @@ import (
 
 // FakeMXJobs implements MXJobInterface
 type FakeMXJobs struct {
-	Fake *FakeKubeflowV1alpha1
+	Fake *FakeFioravanzoV1alpha1
 	ns   string
 }
 
-var mxjobsResource = schema.GroupVersionResource{Group: "kubeflow.org", Version: "v1alpha1", Resource: "mxjobs"}
+var mxjobsResource = schema.GroupVersionResource{Group: "fioravanzo.org", Version: "v1alpha1", Resource: "mxjobs"}
 
-var mxjobsKind = schema.GroupVersionKind{Group: "kubeflow.org", Version: "v1alpha1", Kind: "MXJob"}
+var mxjobsKind = schema.GroupVersionKind{Group: "fioravanzo.org", Version: "v1alpha1", Kind: "MXJob"}
 
 // Get takes name of the mXJob, and returns the corresponding mXJob object, and an error if there is any.
 func (c *FakeMXJobs) Get(name string, options v1.GetOptions) (result *v1alpha1.MXJob, err error) {

@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned"
-	kubeflowv1alpha1 "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/typed/mxnet/v1alpha1"
-	fakekubeflowv1alpha1 "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/typed/mxnet/v1alpha1/fake"
+	fioravanzov1alpha1 "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/typed/mxnet/v1alpha1"
+	fakefioravanzov1alpha1 "github.com/kubeflow/tf-operator/pkg/client/clientset/versioned/typed/mxnet/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -71,12 +71,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// KubeflowV1alpha1 retrieves the KubeflowV1alpha1Client
-func (c *Clientset) KubeflowV1alpha1() kubeflowv1alpha1.KubeflowV1alpha1Interface {
-	return &fakekubeflowv1alpha1.FakeKubeflowV1alpha1{Fake: &c.Fake}
+// FioravanzoV1alpha1 retrieves the FioravanzoV1alpha1Client
+func (c *Clientset) FioravanzoV1alpha1() fioravanzov1alpha1.FioravanzoV1alpha1Interface {
+	return &fakefioravanzov1alpha1.FakeFioravanzoV1alpha1{Fake: &c.Fake}
 }
 
-// Kubeflow retrieves the KubeflowV1alpha1Client
-func (c *Clientset) Kubeflow() kubeflowv1alpha1.KubeflowV1alpha1Interface {
-	return &fakekubeflowv1alpha1.FakeKubeflowV1alpha1{Fake: &c.Fake}
+// Fioravanzo retrieves the FioravanzoV1alpha1Client
+func (c *Clientset) Fioravanzo() fioravanzov1alpha1.FioravanzoV1alpha1Interface {
+	return &fakefioravanzov1alpha1.FakeFioravanzoV1alpha1{Fake: &c.Fake}
 }
