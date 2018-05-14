@@ -49,7 +49,7 @@ type TrainingJob struct {
 
 	recorder record.EventRecorder
 
-	Replicas []*TFReplicaSet
+	Replicas []*MXReplicaSet
 
 	mxjobclient mxjobclient.Interface
 
@@ -77,7 +77,7 @@ func initJob(kubeCli kubernetes.Interface, mxjobclient mxjobclient.Interface, re
 		KubeCli:     kubeCli,
 		mxjobclient: mxjobclient,
 		recorder:    recorder,
-		Replicas:    make([]*TFReplicaSet, 0),
+		Replicas:    make([]*MXReplicaSet, 0),
 		job:         job,
 		status:      *job.Status.DeepCopy(),
 	}
@@ -290,7 +290,7 @@ func (j *TrainingJob) setup(config *mxv1alpha1.ControllerConfig) {
 func (j *TrainingJob) setupReplicas() error {
 	defer Exit(Enter("training.go: $FN"))
 	if len(j.Replicas) != len(j.job.Spec.ReplicaSpecs) {
-		j.Replicas = make([]*TFReplicaSet, 0, len(j.job.Spec.ReplicaSpecs))
+		j.Replicas = make([]*MXReplicaSet, 0, len(j.job.Spec.ReplicaSpecs))
 		for _, t := range j.job.Spec.ReplicaSpecs {
 			r, err := NewTFReplicaSet(j.KubeCli, j.recorder, *t, j)
 			if err != nil {

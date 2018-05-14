@@ -15,7 +15,7 @@
 package trainer
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -41,8 +41,8 @@ const (
 	FailedCreateReason     = "FailedCreate"
 )
 
-// TFReplicaSet is a set of TF processes all acting as the same role (e.g. worker
-type TFReplicaSet struct {
+// MXReplicaSet is a set of MX processes all acting as the same role (e.g. worker)
+type MXReplicaSet struct {
 	ClientSet kubernetes.Interface
 	recorder  record.EventRecorder
 	// Job is a pointer to the TrainingJob to which this replica belongs.
@@ -50,8 +50,8 @@ type TFReplicaSet struct {
 	Spec mxv1alpha1.MXReplicaSpec
 }
 
-// TFReplicas is an interface for managing a set of replicas.
-type TFReplicaSetInterface interface {
+// MXReplicas is an interface for managing a set of replicas.
+type MXReplicaSetInterface interface {
 	Create() error
 	Delete() error
 	GetStatus() (mxv1alpha1.MXReplicaStatus, error)
@@ -78,19 +78,19 @@ type MXConfig struct {
 	Verbosity int32		//"PS_VERBOSE": "2"
 }
 
-func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecorder, tfReplicaSpec mxv1alpha1.MXReplicaSpec, job *TrainingJob) (*TFReplicaSet, error) {
+func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecorder, mxReplicaSpec mxv1alpha1.MXReplicaSpec, job *TrainingJob) (*MXReplicaSet, error) {
 	defer Exit(Enter("replicas.go $FN"))
-	if tfReplicaSpec.MXReplicaType == mxv1alpha1.SCHEDULER && *tfReplicaSpec.Replicas != 1 {
+	if mxReplicaSpec.MXReplicaType == mxv1alpha1.SCHEDULER && *mxReplicaSpec.Replicas != 1 {
 		// TODO(stefano): Could generate the schedule by default without having to declare it on the yml file
 		return nil, errors.New("The SCHEDULER must have Replicas = 1")
 	}
 
-	if tfReplicaSpec.MXPort == nil {
-		return nil, errors.New("tfReplicaSpec.TFPort can't be nil.")
+	if mxReplicaSpec.MXPort == nil {
+		return nil, errors.New("mxReplicaSpec.TFPort can't be nil.")
 	}
 
-	if tfReplicaSpec.Template == nil && tfReplicaSpec.MXReplicaType != mxv1alpha1.SERVER {
-		return nil, fmt.Errorf("tfReplicamxv1alpha1.Template can't be nil for replica type %v.", tfReplicaSpec.MXReplicaType)
+	if mxReplicaSpec.Template == nil && mxReplicaSpec.MXReplicaType != mxv1alpha1.SERVER {
+		return nil, fmt.Errorf("tfReplicamxv1alpha1.Template can't be nil for replica type %v.", mxReplicaSpec.MXReplicaType)
 	}
 
 	// Make sure the replica type is valid.
@@ -98,38 +98,38 @@ func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecord
 
 	isValidReplicaType := false
 	for _, t := range validReplicaTypes {
-		if t == tfReplicaSpec.MXReplicaType {
+		if t == mxReplicaSpec.MXReplicaType {
 			isValidReplicaType = true
 			break
 		}
 	}
 
 	if !isValidReplicaType {
-		return nil, fmt.Errorf("tfReplicaSpec.TFReplicaType is %v but must be one of %v", tfReplicaSpec.MXReplicaType, validReplicaTypes)
+		return nil, fmt.Errorf("mxReplicaSpec.MXReplicaType is %v but must be one of %v", mxReplicaSpec.MXReplicaType, validReplicaTypes)
 	}
 
-	return &TFReplicaSet{
+	return &MXReplicaSet{
 		ClientSet: clientSet,
 		recorder:  recorder,
 		Job:       job,
-		Spec:      tfReplicaSpec,
+		Spec:      mxReplicaSpec,
 	}, nil
 }
 
 // Labels returns the labels for this replica set.
-func (s *TFReplicaSet) Labels() KubernetesLabels {
+func (s *MXReplicaSet) Labels() KubernetesLabels {
 	defer Exit(Enter("replicas.go $FN"))
 	return KubernetesLabels(map[string]string{
 		"kubeflow.org": "",
 		"job_type":     string(s.Spec.MXReplicaType),
-		// runtime_id is set by Job.setup, which is called after the TFReplicaSet is created.
+		// runtime_id is set by Job.setup, which is called after the MXReplicaSet is created.
 		// this is why labels aren't a member variable.
 		"runtime_id":  s.Job.job.Spec.RuntimeId,
 		"tf_job_name": s.Job.job.ObjectMeta.Name})
 }
 
 // CreateServiceWithIndex will create a new service with specify index
-func (s *TFReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) {
+func (s *MXReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) {
 	defer Exit(Enter("replicas.go $FN"))
 	taskLabels := s.Labels()
 	taskLabels["task_index"] = fmt.Sprintf("%v", index)
@@ -147,7 +147,7 @@ func (s *TFReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) 
 			Selector: taskLabels,
 			Ports: []v1.ServicePort{
 				{
-					Name: "tf-port",
+					Name: "mx-port",
 					Port: *s.Spec.MXPort,
 				},
 			},
@@ -159,7 +159,7 @@ func (s *TFReplicaSet) CreateServiceWithIndex(index int32) (*v1.Service, error) 
 }
 
 // CreatePodWithIndex will create a new pod with specify index
-func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
+func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 	defer Exit(Enter("replicas.go $FN"))
 	taskLabels := s.Labels()
 	taskLabels["task_index"] = fmt.Sprintf("%v", index)
@@ -177,24 +177,24 @@ func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 
 	pod.Spec.SchedulerName = s.Job.SchedulerName()
 
-	// Configure the TFCONFIG environment variable.
-	tfConfig := TFConfig{
-		Cluster: s.Job.ClusterSpec(),
-		Task: TaskSpec{
-			Type:  strings.ToLower(string(s.Spec.MXReplicaType)),
-			Index: int(index),
-		},
-		// We need to set environment to cloud  otherwise it will default to local which isn't what we want.
-		Environment: "cloud",
-	}
 
-	tfConfigJson, err := json.Marshal(tfConfig)
-	if err != nil {
-		log.Errorf("Job: %v serializing tfConfig: %v return error; %v", s.Job.job.ObjectMeta.Name, util.Pformat(tfConfig), err)
-		return nil, err
-	}
+	//tfConfig := TFConfig{
+	//	Cluster: s.Job.ClusterSpec(),
+	//	Task: TaskSpec{
+	//		Type:  strings.ToLower(string(s.Spec.MXReplicaType)),
+	//		Index: int(index),
+	//	},
+	//	// We need to set environment to cloud  otherwise it will default to local which isn't what we want.
+	//	Environment: "cloud",
+	//}
+	//
+	//tfConfigJson, err := json.Marshal(tfConfig)
+	//if err != nil {
+	//	log.Errorf("Job: %v serializing tfConfig: %v return error; %v", s.Job.job.ObjectMeta.Name, util.Pformat(tfConfig), err)
+	//	return nil, err
+	//}
 
-	// Add TF_CONFIG environment variable.
+	// Configure the MXNET environment variables for distributed training
 	for i, _ := range pod.Spec.Containers {
 		// We can't get c in the loop variable because that would be by value so our modifications
 		// wouldn't have any effect.
@@ -205,10 +205,69 @@ func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 		if len(c.Env) == 0 {
 			c.Env = make([]v1.EnvVar, 0)
 		}
+		println("DMLC_ROLE: " + s.Spec.MXReplicaType)
+		println("DMLC_PS_ROOT_PORT : " + string(*s.Spec.MXPort))
+		println("DMLC_PS_ROOT_URI: " + s.Job.Replicas[0].genName(0))
+
+
+		// get the number of replicas for this node type
+		//s.Job.Replicas[0].Spec.Replicas  // to access to the replica number of the yml job file
+		var (
+			numWorkers int32 = 0
+			numServers int32 = 0
+			schedulerHostname string = ""
+		)
+		for i, _ := range s.Job.Replicas {
+			c := s.Job.Replicas[i]
+			if c.Spec.MXReplicaType == mxv1alpha1.WORKER {
+				numWorkers = *c.Spec.Replicas
+			}
+			if c.Spec.MXReplicaType == mxv1alpha1.SERVER {
+				numServers = *c.Spec.Replicas
+			}
+			// TODO(stefano): add support for multiple schedulers. Need to find a way to call genName with different indexes.
+			// Maybe populate this value before this and embed it into the Replica structure
+			if c.Spec.MXReplicaType == mxv1alpha1.SCHEDULER {
+				schedulerHostname = c.genName(0)
+			}
+		}
+
 		c.Env = append(c.Env, v1.EnvVar{
-			Name:  "TF_CONFIG",
-			Value: string(tfConfigJson),
+			Name:  "DMLC_ROLE",
+			Value: strings.ToLower(string(s.Spec.MXReplicaType)),
 		})
+		c.Env = append(c.Env, v1.EnvVar{
+			Name:  "DMLC_PS_ROOT_URI",
+			//Value: s.Job.Replicas[0].genName(0),
+			Value: schedulerHostname,
+		})
+		c.Env = append(c.Env, v1.EnvVar{
+			Name:  "DMLC_PS_ROOT_PORT",
+			// TODO(stefano): Change the definition of this port to the SCHEDULER's port
+			Value: fmt.Sprint(*s.Spec.MXPort),
+		})
+		c.Env = append(c.Env, v1.EnvVar{
+			Name:  "DMLC_NUM_SERVER",
+			Value: fmt.Sprint(numServers),
+		})
+		c.Env = append(c.Env, v1.EnvVar{
+			Name:  "DMLC_NUM_WORKER",
+			Value: fmt.Sprint(numWorkers),
+		})
+		c.Env = append(c.Env, v1.EnvVar{
+			Name:  "PS_VERBOSE",
+			Value: "2",
+		})
+
+		//if s.Spec.MXReplicaType == mxv1alpha1.SCHEDULER || s.Spec.MXReplicaType == mxv1alpha1.SERVER {
+		//	c.Command = append(c.Command, "python3")
+		//	c.Command = append(c.Command, "-c")
+		//	c.Command = append(c.Command, "'import mxnet'")
+		//} else if s.Spec.MXReplicaType == mxv1alpha1.WORKER {
+		//	// Use command provided by Dockerfile
+		//	// TODO (stefano): think about how to handle this
+		//	//c.Command = append(c.Command, "python3 /app/main.py")
+		//}
 	}
 
 	log.Infof("Creating pod: %v", pod.ObjectMeta.Name)
@@ -216,7 +275,7 @@ func (s *TFReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 }
 
 // Delete deletes the replicas
-func (s *TFReplicaSet) Delete() error {
+func (s *MXReplicaSet) Delete() error {
 	defer Exit(Enter("replicas.go $FN"))
 	selector, err := s.Labels().ToSelector()
 	if err != nil {
@@ -337,7 +396,7 @@ func replicaStatusFromPodList(l v1.PodList, name string) mxv1alpha1.ReplicaState
 	return mxv1alpha1.ReplicaStateUnknown
 }
 
-func (s *TFReplicaSet) GetSingleReplicaStatus(index int32) mxv1alpha1.ReplicaState {
+func (s *MXReplicaSet) GetSingleReplicaStatus(index int32) mxv1alpha1.ReplicaState {
 	defer Exit(Enter("replicas.go $FN"))
 	p, err := s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).Get(s.genName(index), meta_v1.GetOptions{})
 
@@ -373,7 +432,7 @@ func (s *TFReplicaSet) GetSingleReplicaStatus(index int32) mxv1alpha1.ReplicaSta
 }
 
 // Status returns the status of the replica set.
-func (s *TFReplicaSet) GetStatus() (mxv1alpha1.MXReplicaStatus, error) {
+func (s *MXReplicaSet) GetStatus() (mxv1alpha1.MXReplicaStatus, error) {
 	defer Exit(Enter("replicas.go $FN"))
 	status := mxv1alpha1.MXReplicaStatus{
 		MXReplicaType:  s.Spec.MXReplicaType,
@@ -418,7 +477,7 @@ func (s *TFReplicaSet) GetStatus() (mxv1alpha1.MXReplicaStatus, error) {
 }
 
 // SyncPods will try to check current pods for this TFReplicaSet and try to make it as desired.
-func (s *TFReplicaSet) SyncPods() error {
+func (s *MXReplicaSet) SyncPods() error {
 	defer Exit(Enter("replicas.go $FN"))
 	for index := int32(0); index < *s.Spec.Replicas; index++ {
 
@@ -472,7 +531,7 @@ func (s *TFReplicaSet) SyncPods() error {
 }
 
 // SyncServices will try to check current services for this TFReplicaSet and try to make it as desired.
-func (s *TFReplicaSet) SyncServices() error {
+func (s *MXReplicaSet) SyncServices() error {
 	defer Exit(Enter("replicas.go $FN"))
 	for index := int32(0); index < *s.Spec.Replicas; index++ {
 		_, err := s.ClientSet.CoreV1().Services(s.Job.job.ObjectMeta.Namespace).Get(s.genName(index), meta_v1.GetOptions{})
@@ -504,7 +563,7 @@ func (s *TFReplicaSet) SyncServices() error {
 	return nil
 }
 
-func (s *TFReplicaSet) genName(index int32) string {
+func (s *MXReplicaSet) genName(index int32) string {
 	defer Exit(Enter("replicas.go $FN"))
 	// Truncate tfjob name to 40 characters
 	// The whole job name should be compliant with the DNS_LABEL spec, up to a max length of 63 characters
@@ -513,13 +572,13 @@ func (s *TFReplicaSet) genName(index int32) string {
 	return fmt.Sprintf("%v-%v-%v-%v", fmt.Sprintf("%.40s", s.Job.job.ObjectMeta.Name), strings.ToLower(string(s.Spec.MXReplicaType)), s.Job.job.Spec.RuntimeId, index)
 }
 
-func (s *TFReplicaSet) genPodName(index int32) string {
+func (s *MXReplicaSet) genPodName(index int32) string {
 	defer Exit(Enter("replicas.go $FN"))
 	// Generate a new pod name with random string
 	return s.genName(index) + "-" + util.RandString(5)
 }
 
-func (s *TFReplicaSet) defaultPSConfigMapName() string {
+func (s *MXReplicaSet) defaultPSConfigMapName() string {
 	defer Exit(Enter("replicas.go $FN"))
 	return fmt.Sprintf("cm-ps-%v", s.Job.job.Spec.RuntimeId)
 }
