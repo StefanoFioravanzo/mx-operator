@@ -20,8 +20,8 @@ import (
 	"github.com/onrik/logrus/filename"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/kubeflow/tf-operator/cmd/tf-operator/app"
-	"github.com/kubeflow/tf-operator/cmd/tf-operator/app/options"
+	"github.com/kubeflow/tf-operator/cmd/mx-operator/app"
+	"github.com/kubeflow/tf-operator/cmd/mx-operator/app/options"
 )
 
 func init() {

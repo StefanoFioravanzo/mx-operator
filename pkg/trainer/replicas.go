@@ -215,7 +215,7 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 		var (
 			numWorkers int32 = 0
 			numServers int32 = 0
-			schedulerHostname string = ""
+			//schedulerHostname string = ""
 		)
 		for i, _ := range s.Job.Replicas {
 			c := s.Job.Replicas[i]
@@ -228,7 +228,7 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 			// TODO(stefano): add support for multiple schedulers. Need to find a way to call genName with different indexes.
 			// Maybe populate this value before this and embed it into the Replica structure
 			if c.Spec.MXReplicaType == mxv1alpha1.SCHEDULER {
-				schedulerHostname = c.genName(0)
+				//schedulerHostname = c.genName(0)
 			}
 		}
 
@@ -238,12 +238,13 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 		})
 		c.Env = append(c.Env, v1.EnvVar{
 			Name:  "DMLC_PS_ROOT_URI",
-			//Value: s.Job.Replicas[0].genName(0),
-			Value: schedulerHostname,
+			Value: s.Job.Replicas[0].genName(0),
+			// TODO(stefano): for the scheduler try to access directly to the IP address. https://github.com/kubernetes/client-go/issues/300
+			//Value: schedulerHostname,
 		})
 		c.Env = append(c.Env, v1.EnvVar{
 			Name:  "DMLC_PS_ROOT_PORT",
-			// TODO(stefano): Change the definition of this port to the SCHEDULER's port
+			// TODO(stefano): Change the definition of this port to the SCHEDULER's port in the structure (we do not need a generic MXPort - just a Scheduler port)
 			Value: fmt.Sprint(*s.Spec.MXPort),
 		})
 		c.Env = append(c.Env, v1.EnvVar{
@@ -271,7 +272,8 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 	}
 
 	log.Infof("Creating pod: %v", pod.ObjectMeta.Name)
-	return s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).Create(pod)
+	createdPod, err := s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).Create(pod)
+	return createdPod, err
 }
 
 // Delete deletes the replicas
