@@ -1,0 +1,34 @@
+{{- if .Values.dashboard.install }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mx-job-dashboard
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    name: mx-job-dashboard
+  type: {{ .Values.dashboard.serviceType }}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mx-job-dashboard
+spec:
+  template:
+    metadata:
+      labels:
+        name: mx-job-dashboard
+    spec:    
+{{- if .Values.rbac.install }}
+      serviceAccountName: mx-job-dashboard
+{{- end }}
+      containers:
+      - name: mx-job-dashboard
+        image: {{ .Values.image }}
+        command:
+          - /opt/tensorflow_k8s/dashboard/backend
+        ports:
+        - containerPort: 8080
+{{- end }}
