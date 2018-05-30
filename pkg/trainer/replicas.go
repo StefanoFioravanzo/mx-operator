@@ -120,12 +120,12 @@ func NewTFReplicaSet(clientSet kubernetes.Interface, recorder record.EventRecord
 func (s *MXReplicaSet) Labels() KubernetesLabels {
 	defer Exit(Enter("replicas.go $FN"))
 	return KubernetesLabels(map[string]string{
-		"kubeflow.org": "",
+		"fioravanzo.org": "",
 		"job_type":     string(s.Spec.MXReplicaType),
 		// runtime_id is set by Job.setup, which is called after the MXReplicaSet is created.
 		// this is why labels aren't a member variable.
 		"runtime_id":  s.Job.job.Spec.RuntimeId,
-		"tf_job_name": s.Job.job.ObjectMeta.Name})
+		"mx_job_name": s.Job.job.ObjectMeta.Name})
 }
 
 // CreateServiceWithIndex will create a new service with specify index
@@ -492,9 +492,10 @@ func (s *MXReplicaSet) SyncPods() error {
 			return err
 		}
 
-		// Filter the unactive pods
-		fieldSelector := "status.phase!=" + string(v1.PodFailed) +
-			",deletionTimestamp!=nil"
+		//// Filter the unactive pods
+		//fieldSelector := "status.phase!=" + string(v1.PodFailed) +
+		//	",deletionTimestamp!=nil"
+		fieldSelector := "status.phase!=" + string(v1.PodFailed)
 
 		options := meta_v1.ListOptions{
 			LabelSelector: labelSelector,
@@ -502,6 +503,8 @@ func (s *MXReplicaSet) SyncPods() error {
 		}
 
 		// List to get pods
+		pls, err := s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).List(meta_v1.ListOptions{})
+		print(pls)
 		pl, err := s.ClientSet.CoreV1().Pods(s.Job.job.ObjectMeta.Namespace).List(options)
 
 		if len(pl.Items) == 0 {

@@ -234,7 +234,8 @@ func (c *Controller) syncMXJob(key string) (bool, error) {
 
 	// Create a new TrainingJob if there is no TrainingJob stored for it in the jobs map or if the UID's don't match.
 	// The UID's won't match in the event we deleted the job and then recreated the job with the same name.
-	if cJob, ok := c.jobs[key]; !ok || cJob.UID() != mxJob.UID {
+	cJob, ok := c.jobs[key]
+	if !ok || cJob.UID() != mxJob.UID {
 		nc, err := trainer.NewJob(c.KubeClient, c.MXJobClient, c.recorder, mxJob, &c.config)
 
 		if err != nil {
