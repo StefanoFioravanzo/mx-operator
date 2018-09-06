@@ -6,7 +6,7 @@ mxImage: stefanofioravanzo/mxnet-cifar10-dist:cpu
 # Which cloud provider is kubernetes hosted on.
 # Supported values are gke or azure.
 # Leave blank to use a default, non-cloud specific config.
-cloud: 
+cloud: azure
 
 ## Whether the dashboard should be installed and the kind of service to use
 dashboard: 

@@ -180,7 +180,7 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 
 	//tfConfig := TFConfig{
 	//	Cluster: s.Job.ClusterSpec(),
-	//	Task: TaskSpec{
+	//	Task: nTaskSpec{
 	//		Type:  strings.ToLower(string(s.Spec.MXReplicaType)),
 	//		Index: int(index),
 	//	},
