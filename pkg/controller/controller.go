@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package controller provides a Kubernetes controller for a TensorFlow job resource.
+// Package controller provides a Kubernetes controller for a MXNet job resource.
 package controller
 
 import (
@@ -92,7 +92,7 @@ func New(kubeClient kubernetes.Interface, mxJobClient mxjobclient.Interface,
 	defer Exit(Enter("controller.go $FN"))
 	mxJobInformer := mxJobInformerFactory.Fioravanzo().V1alpha1().MXJobs()
 
-	kubeflowscheme.AddToScheme(scheme.Scheme)  // TODO(stefano): what is a scheme?
+	kubeflowscheme.AddToScheme(scheme.Scheme)
 	log.Debug("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.Infof)

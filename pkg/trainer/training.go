@@ -223,7 +223,6 @@ func (j *TrainingJob) setup(config *mxv1alpha1.ControllerConfig) {
 		}
 
 		// Set defaults.
-		// TODO(stefano): Understand how to use defaults.go and the defaulter generator
 		//scheme.Scheme.Default(j.job)
 
 		// SetDefaults_MXJob sets any unspecified values to defaults

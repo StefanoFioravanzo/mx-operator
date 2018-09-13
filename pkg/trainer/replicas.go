@@ -244,7 +244,6 @@ func (s *MXReplicaSet) CreatePodWithIndex(index int32) (*v1.Pod, error) {
 		})
 		c.Env = append(c.Env, v1.EnvVar{
 			Name:  "DMLC_PS_ROOT_PORT",
-			// TODO(stefano): Change the definition of this port to the SCHEDULER's port in the structure (we do not need a generic MXPort - just a Scheduler port)
 			Value: fmt.Sprint(*s.Spec.MXPort),
 		})
 		c.Env = append(c.Env, v1.EnvVar{
