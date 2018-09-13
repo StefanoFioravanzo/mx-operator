@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROJECT_ROOT="/Users/StefanoFiora/Google Drive/Stefano/Work/FBK_MPBA/Projects/HighPerformanceDeepLearning/DistributedTraining/tf-operator/"
+PROJECT_ROOT="."
 OPERATOR_SOURCE=${GOPATH}/src/github.com/kubeflow
 
 rm -rf vendor/src

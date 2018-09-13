@@ -4,38 +4,23 @@
 $ tree -d -I 'vendor|bin|.git'
 .
 ├── build
-│   ├── images
-│   │   └── tf_operator
-│   └── release
+│   ├── chart
+│   │   └── mx-job-operator-chart
+│   │       └── templates
+│   │           └── tests
+│   └── images
+│       └── mx_operator
 ├── cmd
-│   └── tf-operator
+│   └── mx-operator
 │       └── app
 │           └── options
-├── dashboard
-│   ├── backend
-│   │   ├── client
-│   │   └── handler
-│   └── frontend
-│       ├── public
-│       └── src
-│           └── components
-├── docs
-│   └── diagrams
 ├── examples
-│   ├── crd
-│   ├── gke
-│   │   └── notebook_image
-│   ├── tensorflow-models
-│   ├── tf_job
-│   │   └── templates
-│   └── tf_sample
-│       └── tf_sample
 ├── hack
-│   ├── grpc_tensorflow_server
+│   ├── boilerplate
 │   └── scripts
 ├── pkg
 │   ├── apis
-│   │   └── tensorflow
+│   │   └── mxnet
 │   │       ├── helper
 │   │       ├── v1alpha1
 │   │       └── validation
@@ -45,31 +30,21 @@ $ tree -d -I 'vendor|bin|.git'
 │   │   │       ├── fake
 │   │   │       ├── scheme
 │   │   │       └── typed
-│   │   │           └── tensorflow
+│   │   │           └── mxnet
 │   │   │               └── v1alpha1
 │   │   │                   └── fake
 │   │   ├── informers
 │   │   │   └── externalversions
 │   │   │       ├── internalinterfaces
-│   │   │       └── tensorflow
+│   │   │       └── mxnet
 │   │   │           └── v1alpha1
 │   │   └── listers
-│   │       └── tensorflow
+│   │       └── mxnet
 │   │           └── v1alpha1
 │   ├── controller
 │   ├── trainer
 │   └── util
-│       ├── k8sutil
-│       └── retryutil
-├── py
-├── test
-│   ├── e2e
-│   └── test-infra
-│       └── airflow
-│           └── dags
-├── tf-job-operator-chart
-│   └── templates
-│       └── tests
+│       └── k8sutil
 └── version
 ```
 
@@ -95,32 +70,29 @@ glide install -v
 Build it
 
 ```sh
-go install github.com/kubeflow/tf-operator/cmd/tf-operator
+go install github.com/kubeflow/tf-operator/cmd/mx-operator
 ```
 
 ## Building all the artifacts.
 
-[pipenv](https://docs.pipenv.org/) is recommended to manage local Python environment.
-You can find setup information on their website.
+#### Docker image
 
-To build the following artifacts:
+You can run the Dockerfile under `build/images/mx_operator` from the root directory:
 
-* Docker image for the operator
-* Helm chart for deploying it
-
-You can run
-
-```sh
-# to setup pipenv you have to step into the directory where Pipfile is located
-cd py
-pipenv install
-pipenv shell
-cd ..
-python -m py.release local --registry=${REGISTRY}
+```
+docker build -f ./build/images/mx_operator/Dockerfile -t <repository>/mx-operator .
 ```
 
-* The docker image will be tagged into your registry
-* The helm chart will be created in **./bin**
+#### Help chart for deployment
+
+```bash
+# initialization
+helm init --upgrade
+helm init
+
+# create chart. Run command in build/chart
+helm package  mx-job-operator-chart
+```
 
 ## Running the Operator Locally
 
@@ -139,35 +111,18 @@ export KUBEFLOW_NAMESPACE=$(your_namespace)
 Now we are ready to run operator locally:
 
 ```sh
-kubectl create -f examples/crd/crd.yaml
-tf-operator --logtostderr
+kubectl create -f examples/crd.yaml
+mx-operator --logtostderr
 ```
 
-The first command creates a CRD `tfjobs`. And the second command runs the operator locally. To verify local
+The first command creates a CRD `mxjobs`. And the second command runs the operator locally. To verify local
 operator is working, create an example job and you should see jobs created by it.
 
 ```sh
-kubectl create -f https://raw.githubusercontent.com/kubeflow/tf-operator/master/examples/tf_job.yaml
+kubectl create -f examples/mxjob-linear-dist.yml
 ```
 
 ## Go version
 
 On ubuntu the default go package appears to be gccgo-go which has problems see [issue](https://github.com/golang/go/issues/15429) golang-go package is also really old so install from golang tarballs instead.
 
-## Code Style
-
-### Python
-
-* Use [yapf](https://github.com/google/yapf) to format Python code
-* `yapf` style is configured in `.style.yapf` file
-* To autoformat code
-
-  ```sh
-  yapf -i py/**/*.py
-  ```
-
-* To sort imports
-
-  ```sh
-  isort path/to/module.py
-  ```
