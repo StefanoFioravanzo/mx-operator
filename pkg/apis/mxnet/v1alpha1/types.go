@@ -22,7 +22,6 @@ import (
 const (
 	CRDKind       = "mxjob"
 	CRDKindPlural = "mxjobs"
-	// TODO(stefano): Check wether to use fioravanzo.org or mxnet (was there tensorflow or k8s.io?)
 	CRDGroup      = "fioravanzo.org"
 	CRDVersion    = "v1alpha1"
 	// Value of the APP label that gets applied to a lot of entities.
