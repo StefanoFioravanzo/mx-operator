@@ -30,7 +30,7 @@ To generate the clientsets run in the folder `~/.go/src/k8s.io/code-generator`:
 - Change the pod creation process updating the environment variables injected into the containers in `replicas.go`
 - Various smaller changes here and there to make everything work.
 
---
+---
 
 For information about motivation and design for the
 CRD please refer to
@@ -125,8 +125,8 @@ Using GPUs is as easy as adding the following spec in the workers' container spe
 
 ```yaml
 resources:
-	limits:
-		alpha.kubernetes.io/nvidia-gpu: 1
+  limits:
+    alpha.kubernetes.io/nvidia-gpu: 1
 ```
 
 You also need to run code that supports GPU training. The job spec for GPU training would look like the following:
